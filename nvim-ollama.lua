@@ -1,3 +1,5 @@
+local utils = require("utils")
+
 local M = {}
 
 -- Variables to keep track of our persistent state
@@ -5,12 +7,19 @@ local persistent_buf = nil
 local floating_win = nil
 local i = 0
 
-local function append_to_buffer(lines)
-	vim.schedule(function()
-		if persistent_buf and vim.api.nvim_buf_is_valid(persistent_buf) then
-			vim.api.nvim_buf_set_lines(persistent_buf, -1, -1, false, lines)
-		end
-	end)
+function M.move_cursor_below_last_match(pattern)
+	-- Step 2: Find the text pattern
+	local line_number = vim.fn.search(pattern, "W")
+
+	if line_number == 0 then
+		print("Pattern not found.")
+		return
+	end
+
+	-- Step 3: Move cursor to the line below the matched line
+	local next_line_number = line_number + 1
+	local buffer = vim.api.nvim_get_current_buf()
+	vim.fn.cursor(next_line_number, 0)
 end
 
 -- 1. Function to create a centered floating window
@@ -24,8 +33,10 @@ function M.open_floating_window()
 
 	-- 2. If window is already open, just focus it and stop
 	if floating_win and vim.api.nvim_win_is_valid(floating_win) then
+		-- print("Floating win exists")
 		vim.api.nvim_set_current_win(floating_win)
 	else
+		-- print("Creating window again")
 		-- local ui = vim.api.nvim_list_uis()[0] -- Get UI dimensions
 		local ui_width = vim.o.columns
 		local ui_height = vim.o.lines
@@ -53,14 +64,16 @@ function M.open_floating_window()
 			end,
 		})
 	end
+	M.move_cursor_below_last_match("<CR>")
 end
 
 function M.ask_ollama_async(prompt)
 	-- Let user know AI is running
-	append_to_buffer({ "--- AI is thinking ---" })
+	utils.append_to_buffer({ "Asisstant: " })
+	M.move_cursor_below_last_match("s")
 
 	local obj = {
-		model = "qwen3:14b",
+		model = "qwen2.5-coder:14b",
 		prompt = prompt,
 		stream = false,
 	}
@@ -77,7 +90,7 @@ function M.ask_ollama_async(prompt)
 	}, { text = true }, function(out)
 		-- This callback runs when the process finishes
 		if out.code ~= 0 then
-			append_to_buffer({ "Error: Ollama request failed." })
+			utils.append_to_buffer({ "Error: Ollama request failed." })
 			return
 		end
 
@@ -85,10 +98,12 @@ function M.ask_ollama_async(prompt)
 		if success and data.response then
 			-- Split response by newline for nvim_buf_set_lines
 			local lines = vim.split(data.response, "\n")
-			append_to_buffer(lines)
+			utils.append_to_buffer(lines)
 		else
-			append_to_buffer({ "Error: Failed to parse JSON." })
+			utils.append_to_buffer({ "Error: Failed to parse JSON." })
 		end
+
+		utils.append_to_buffer({ "User: " })
 
 		vim.schedule(function()
 			-- If the buffer is empty, line_count is 1.
@@ -107,22 +122,15 @@ function M.setup()
 	})
 
 	persistent_buf = vim.api.nvim_create_buf(false, true)
+	utils.append_to_buffer({ "" })
 	vim.keymap.set("n", "<CR>", function()
-		local input = vim.api.nvim_get_current_line()
+		local input = utils.buf_to_str(persistent_buf)
 
 		-- Don't send empty lines
 		if input ~= "" then
-			-- 1. Trigger your function
 			M.ask_ollama_async(input)
-
-			-- 2. Move cursor to the end of the buffer for the next input
-			local line_count = vim.api.nvim_buf_line_count(persistent_buf)
-			-- Add a new empty line at the bottom
-			vim.api.nvim_buf_set_lines(persistent_buf, -1, -1, false, { "" })
-			-- Set cursor to that new line
-			vim.api.nvim_win_set_cursor(0, { line_count + 1, 0 })
 		else
-			append_to_buffer({ "Empty input" })
+			utils.append_to_buffer({ "Empty input" })
 		end
 	end, { buffer = persistent_buf, desc = "Submit prompt to Ollama" })
 	M.ask_ollama_async("Say some greettings to the user who is just starting to work with you.")
