@@ -1,5 +1,5 @@
 utils = {}
-
+-- Define the log path: ~/.local/state/nvim/my_ollama_plugin.log
 function utils.print(text)
 	vim.schedule(function()
 		print(text)

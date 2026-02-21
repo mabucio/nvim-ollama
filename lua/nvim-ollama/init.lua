@@ -5,6 +5,34 @@ local M = {}
 -- Variables to keep track of our persistent state
 local persistent_buf = nil
 local floating_win = nil
+-- Define the log path: ~/.local/state/nvim/my_ollama_plugin.log
+M.log_path = vim.fn.stdpath("log") .. "/ollama_plugin.log"
+
+function M.log_error(msg)
+	local time = os.date("%Y-%m-%d %H:%M:%S")
+	vim.schedule(function()
+		local f = io.open(M.log_path, "a")
+		if f then
+			f:write(string.format("[%s] ERROR: %s\n", time, msg))
+			f:close()
+		end
+	end)
+end
+
+function M.log_info(msg)
+	local time = os.date("%Y-%m-%d %H:%M:%S")
+	vim.schedule(function()
+		local f = io.open(M.log_path, "a")
+		if f then
+			f:write(string.format("[%s] INFO: %s\n", time, msg))
+			f:close()
+		end
+	end)
+end
+
+function M.open_log()
+	vim.cmd("edit " .. M.log_path)
+end
 
 function M.open_floating_window()
 	-- Create a new empty buffer (not listed, scratch buffer)
@@ -84,9 +112,9 @@ function M.stream_ollama(prompt)
 	}, {
 		-- This callback runs every time stdout receives data
 		stdout = function(_, data)
-			utils.print("MACIEK something worked")
+			M.log_info("Ollama stream stdout callback")
 			if not data then
-				utils.print("Not data")
+				M.log_info("No data")
 				return
 			end
 
@@ -100,9 +128,9 @@ function M.stream_ollama(prompt)
 			end
 		end,
 		stderr = function(_, data)
-			utils.print("MACIEK something doesn't work")
+			M.log_error("stderr callback")
 			if data then
-				utils.print("MACIEK Error: " .. data)
+				M.log_error("stderr data: " .. data)
 				return
 				-- utils.append_to_buffer(persistent_buf, { data })
 			end
@@ -155,7 +183,11 @@ end
 
 function M.setup()
 	vim.api.nvim_create_user_command("LLM", M.open_floating_window, {
-		desc = "My custom command to open a window",
+		desc = "Open Chat with LLM.",
+	})
+
+	vim.api.nvim_create_user_command("LOG", M.open_log, {
+		desc = "Open plugin log file",
 	})
 
 	persistent_buf = vim.api.nvim_create_buf(false, true)
