@@ -5,10 +5,8 @@ local M = {}
 -- Variables to keep track of our persistent state
 local persistent_buf = nil
 local floating_win = nil
-local i = 0
 
 function M.open_floating_window()
-	i = i + 1
 	-- Create a new empty buffer (not listed, scratch buffer)
 	if not persistent_buf or not vim.api.nvim_buf_is_valid(persistent_buf) then
 		persistent_buf = vim.api.nvim_create_buf(false, true)
@@ -48,13 +46,77 @@ function M.open_floating_window()
 			end,
 		})
 	end
-	utils.move_cursor_below_last_match("<CR>")
+	utils.move_cursor_to_end_of_buffer()
+end
+
+function M.stream_ollama(prompt)
+	utils.append_to_buffer(persistent_buf, { "Asisstant: " })
+
+	local model = "qwen2.5-coder:14b"
+	local url = "http://localhost:11434/api/generate"
+	-- Prepare the JSON payload
+	local body = vim.json.encode({
+		model = model,
+		prompt = prompt,
+		stream = true,
+	})
+
+	-- Use vim.system to run curl asynchronously
+	vim.system({
+		"curl",
+		"-s",
+		"-N",
+		"-X",
+		"POST",
+		url,
+		"-d",
+		body,
+		"Content-Type: application/json",
+		-- "curl",
+		-- "-N",
+		-- "-X",
+		-- "POST",
+		-- url,
+		-- "-d",
+		-- body,
+		-- "-H",
+		-- "Content-Type: application/json",
+	}, {
+		-- This callback runs every time stdout receives data
+		stdout = function(_, data)
+			utils.print("MACIEK something worked")
+			if not data then
+				utils.print("Not data")
+				return
+			end
+
+			-- Ollama sends ND-JSON (one JSON object per line)
+			for line in data:gmatch("[^\r\n]+") do
+				local ok, decoded = pcall(vim.json.decode, line)
+				if ok and decoded.response then
+					-- Schedule UI updates on the main Neovim loop
+					utils.append_to_buffer_text(persistent_buf, decoded.response)
+				end
+			end
+		end,
+		stderr = function(_, data)
+			utils.print("MACIEK something doesn't work")
+			if data then
+				utils.print("MACIEK Error: " .. data)
+				return
+				-- utils.append_to_buffer(persistent_buf, { data })
+			end
+		end,
+	}, function()
+		utils.append_to_buffer(persistent_buf, { "User: " })
+		utils.move_cursor_to_end_of_buffer()
+	end)
 end
 
 function M.ask_ollama_async(prompt)
 	-- Let user know AI is running
 	utils.append_to_buffer(persistent_buf, { "Asisstant: " })
-	utils.move_cursor_below_last_match("s")
+	utils.move_cursor_to_end_of_buffer()
 
 	local obj = {
 		model = "qwen2.5-coder:14b",
@@ -86,18 +148,9 @@ function M.ask_ollama_async(prompt)
 		else
 			utils.append_to_buffer(persistent_buf, { "Error: Failed to parse JSON." })
 		end
-
-		utils.append_to_buffer(persistent_buf, { "User: " })
-
-		vim.schedule(function()
-			-- If the buffer is empty, line_count is 1.
-			-- nvim_win_set_cursor takes {row, col}, row is 1-indexed.
-			if floating_win and vim.api.nvim_win_is_valid(floating_win) then
-				local line_count = vim.api.nvim_buf_line_count(persistent_buf)
-				vim.api.nvim_win_set_cursor(floating_win, { line_count, 0 })
-			end
-		end)
 	end)
+	utils.append_to_buffer(persistent_buf, { "User: " })
+	utils.move_cursor_to_end_of_buffer()
 end
 
 function M.setup()
@@ -106,19 +159,19 @@ function M.setup()
 	})
 
 	persistent_buf = vim.api.nvim_create_buf(false, true)
-	utils.append_to_buffer(persistent_buf, { "Initialized the plugin" })
+	utils.append_to_buffer(persistent_buf, { "Initialized the plugin:" })
 	vim.keymap.set("n", "<CR>", function()
 		local input = utils.buf_to_str(persistent_buf)
 
 		-- Don't send empty lines
 		if input ~= "" then
-			M.ask_ollama_async(input)
-			utils.move_cursor_below_last_match(":")
+			M.stream_ollama(input)
 		else
 			utils.append_to_buffer(persistent_buf, { "Empty input" })
 		end
 	end, { buffer = persistent_buf, desc = "Submit prompt to Ollama" })
-	M.ask_ollama_async("Say some greettings to the user who is just starting to work with you.")
+	M.stream_ollama("Say some greettings to the user who is just starting to work with you.")
+	utils.move_cursor_to_end_of_buffer()
 end
 
 return M
