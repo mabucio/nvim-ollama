@@ -1,4 +1,4 @@
-local utils = require("utils")
+local utils = require("nvim-ollama.utils")
 
 local M = {}
 
@@ -22,7 +22,6 @@ function M.move_cursor_below_last_match(pattern)
 	vim.fn.cursor(next_line_number, 0)
 end
 
--- 1. Function to create a centered floating window
 function M.open_floating_window()
 	i = i + 1
 	-- Create a new empty buffer (not listed, scratch buffer)
