@@ -7,21 +7,6 @@ local persistent_buf = nil
 local floating_win = nil
 local i = 0
 
-function M.move_cursor_below_last_match(pattern)
-	-- Step 2: Find the text pattern
-	local line_number = vim.fn.search(pattern, "W")
-
-	if line_number == 0 then
-		print("Pattern not found.")
-		return
-	end
-
-	-- Step 3: Move cursor to the line below the matched line
-	local next_line_number = line_number + 1
-	local buffer = vim.api.nvim_get_current_buf()
-	vim.fn.cursor(next_line_number, 0)
-end
-
 function M.open_floating_window()
 	i = i + 1
 	-- Create a new empty buffer (not listed, scratch buffer)
@@ -63,13 +48,13 @@ function M.open_floating_window()
 			end,
 		})
 	end
-	M.move_cursor_below_last_match("<CR>")
+	utils.move_cursor_below_last_match("<CR>")
 end
 
 function M.ask_ollama_async(prompt)
 	-- Let user know AI is running
 	utils.append_to_buffer(persistent_buf, { "Asisstant: " })
-	M.move_cursor_below_last_match("s")
+	utils.move_cursor_below_last_match("s")
 
 	local obj = {
 		model = "qwen2.5-coder:14b",
@@ -128,6 +113,7 @@ function M.setup()
 		-- Don't send empty lines
 		if input ~= "" then
 			M.ask_ollama_async(input)
+			utils.move_cursor_below_last_match(":")
 		else
 			utils.append_to_buffer(persistent_buf, { "Empty input" })
 		end

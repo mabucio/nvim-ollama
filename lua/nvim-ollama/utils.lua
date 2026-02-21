@@ -13,4 +13,19 @@ function utils.buf_to_str(buf, separator)
 	return table.concat(content, sep)
 end
 
+function utils.move_cursor_below_last_match(pattern)
+	-- Step 2: Find the text pattern
+	local line_number = vim.fn.search(pattern, "W")
+
+	if line_number == 0 then
+		print("Pattern not found.")
+		return
+	end
+
+	-- Step 3: Move cursor to the line below the matched line
+	local next_line_number = line_number + 1
+	local buffer = vim.api.nvim_get_current_buf()
+	vim.fn.cursor(next_line_number, 0)
+end
+
 return utils
