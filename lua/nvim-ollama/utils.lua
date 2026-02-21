@@ -1,8 +1,8 @@
 utils = {}
-function utils.append_to_buffer(lines)
+function utils.append_to_buffer(buf, lines)
 	vim.schedule(function()
-		if persistent_buf and vim.api.nvim_buf_is_valid(persistent_buf) then
-			vim.api.nvim_buf_set_lines(persistent_buf, -1, -1, false, lines)
+		if buf and vim.api.nvim_buf_is_valid(buf) then
+			vim.api.nvim_buf_set_lines(buf, -1, -1, false, lines)
 		end
 	end)
 end

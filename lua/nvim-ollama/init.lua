@@ -68,7 +68,7 @@ end
 
 function M.ask_ollama_async(prompt)
 	-- Let user know AI is running
-	utils.append_to_buffer({ "Asisstant: " })
+	utils.append_to_buffer(persistent_buf, { "Asisstant: " })
 	M.move_cursor_below_last_match("s")
 
 	local obj = {
@@ -89,7 +89,7 @@ function M.ask_ollama_async(prompt)
 	}, { text = true }, function(out)
 		-- This callback runs when the process finishes
 		if out.code ~= 0 then
-			utils.append_to_buffer({ "Error: Ollama request failed." })
+			utils.append_to_buffer(persistent_buf, { "Error: Ollama request failed." })
 			return
 		end
 
@@ -97,12 +97,12 @@ function M.ask_ollama_async(prompt)
 		if success and data.response then
 			-- Split response by newline for nvim_buf_set_lines
 			local lines = vim.split(data.response, "\n")
-			utils.append_to_buffer(lines)
+			utils.append_to_buffer(persistent_buf, lines)
 		else
-			utils.append_to_buffer({ "Error: Failed to parse JSON." })
+			utils.append_to_buffer(persistent_buf, { "Error: Failed to parse JSON." })
 		end
 
-		utils.append_to_buffer({ "User: " })
+		utils.append_to_buffer(persistent_buf, { "User: " })
 
 		vim.schedule(function()
 			-- If the buffer is empty, line_count is 1.
@@ -121,7 +121,7 @@ function M.setup()
 	})
 
 	persistent_buf = vim.api.nvim_create_buf(false, true)
-	utils.append_to_buffer({ "" })
+	utils.append_to_buffer(persistent_buf, { "Initialized the plugin" })
 	vim.keymap.set("n", "<CR>", function()
 		local input = utils.buf_to_str(persistent_buf)
 
@@ -129,7 +129,7 @@ function M.setup()
 		if input ~= "" then
 			M.ask_ollama_async(input)
 		else
-			utils.append_to_buffer({ "Empty input" })
+			utils.append_to_buffer(persistent_buf, { "Empty input" })
 		end
 	end, { buffer = persistent_buf, desc = "Submit prompt to Ollama" })
 	M.ask_ollama_async("Say some greettings to the user who is just starting to work with you.")
