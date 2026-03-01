@@ -58,14 +58,16 @@ function utils.move_cursor_below_last_match(pattern)
 	end)
 end
 
-function utils.move_cursor_to_end_of_buffer()
+function utils.move_cursor_to_end_of_buffer(window)
 	vim.schedule(function()
-		-- Get the total number of lines in the buffer
-		local line_count = vim.fn.line("$")
+		if window == vim.api.nvim_get_current_win() then
+			-- Get the total number of lines in the buffer
+			local line_count = vim.fn.line("$")
 
-		-- Move the cursor to the last line and the end of that line
-		vim.fn.cursor(line_count, 0)
-		vim.cmd("normal! $")
+			-- Move the cursor to the last line and the end of that line
+			vim.fn.cursor(line_count, 0)
+			vim.cmd("normal! $")
+		end
 	end)
 end
 return utils

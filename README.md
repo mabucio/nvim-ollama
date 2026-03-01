@@ -1,2 +1,6 @@
 # nvim-ollama
-Plugin used to give context of your code to ollama so your locally deployed model can give code suggestions. 
+
+How to:
+Run command "LLM" to start chat with coding assistant.
+After writing prompt in window press Enter in normal mode to trigger AI response.
+
