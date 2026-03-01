@@ -1,22 +1,22 @@
-cs = {}
+M = {}
 
-cs.ns_id = vim.api.nvim_create_namespace("my_ghost_text")
-cs.current_suggestion = ""
+M.ns_id = 0
+M.current_suggestion = ""
 
 -- Function to show the shadow text
 local function show_suggestion(text)
 	local cursor = vim.api.nvim_win_get_cursor(0)
 	local line = cursor[1]
 	local col = cursor[2]
-	cs.current_suggestion = text
+	M.current_suggestion = text
 
 	local mode = vim.api.nvim_get_mode().mode
 	if mode ~= "i" then
 		return -- Abort: User left Insert mode
 	end
 
-	vim.api.nvim_buf_set_extmark(0, cs.ns_id, line - 1, col, {
-		virt_text = { { cs.current_suggestion, "NvimOllamaCustomGhost" } },
+	vim.api.nvim_buf_set_extmark(0, M.ns_id, line - 1, col, {
+		virt_text = { { M.current_suggestion, "NvimOllamaCustomGhost" } },
 		virt_text_pos = "inline",
 		hl_mode = "replace",
 	})
@@ -24,14 +24,14 @@ end
 
 -- Function to clear the shadow text
 local function clear_suggestion()
-	vim.api.nvim_buf_clear_namespace(0, cs.ns_id, 0, -1)
-	cs.current_suggestion = ""
+	vim.api.nvim_buf_clear_namespace(0, M.ns_id, 0, -1)
+	M.current_suggestion = ""
 end
 
 local function accept_suggestion()
-	if cs.current_suggestion ~= "" then
+	if M.current_suggestion ~= "" then
 		-- Insert the suggestion text into the line
-		vim.api.nvim_put({ cs.current_suggestion }, "c", false, true)
+		vim.api.nvim_put({ M.current_suggestion }, "c", false, true)
 		clear_suggestion()
 	end
 end
@@ -46,7 +46,9 @@ local function setup_hl()
 	)
 end
 
-function cs.register_suggestions(func_generate_suggestion)
+function M.register_suggestions(func_generate_suggestion)
+	M.ns_id = vim.api.nvim_create_namespace("no_ghost_text")
+
 	vim.api.nvim_create_autocmd("ColorScheme", {
 		callback = setup_hl,
 	})
@@ -79,4 +81,4 @@ function cs.register_suggestions(func_generate_suggestion)
 	vim.api.nvim_create_autocmd("InsertLeave", { callback = clear_suggestion })
 end
 
-return cs
+return M
