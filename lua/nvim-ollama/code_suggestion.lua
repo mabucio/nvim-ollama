@@ -46,7 +46,7 @@ local function setup_hl()
 	)
 end
 
-function cs.register_suggestions()
+function cs.register_suggestions(func_generate_suggestion)
 	vim.api.nvim_create_autocmd("ColorScheme", {
 		callback = setup_hl,
 	})
@@ -66,7 +66,7 @@ function cs.register_suggestions()
 			vim.defer_fn(function()
 				-- Logic to decide WHAT to suggest goes here
 				clear_suggestion()
-				local suggestion = "suggestion"
+				local suggestion = func_generate_suggestion()
 				show_suggestion(suggestion)
 			end, 1000)
 		end,

@@ -1,39 +1,12 @@
 local utils = require("nvim-ollama.utils")
 local code_sug = require("nvim-ollama.code_suggestion")
+local ollama = require("nvim-ollama.ollama")
+local log = require("nvim-ollama.log")
 
 local M = {}
 -- Variables to keep track of our persistent state
 M.buffer = nil
 M.window = nil
-
--- Define the log path: ~/.local/state/nvim/my_ollama_plugin.log
-M.log_path = vim.fn.stdpath("log") .. "/ollama_plugin.log"
-
-function M.log_error(msg)
-	local time = os.date("%Y-%m-%d %H:%M:%S")
-	vim.schedule(function()
-		local f = io.open(M.log_path, "a")
-		if f then
-			f:write(string.format("[%s] ERROR: %s\n", time, msg))
-			f:close()
-		end
-	end)
-end
-
-function M.log_info(msg)
-	local time = os.date("%Y-%m-%d %H:%M:%S")
-	vim.schedule(function()
-		local f = io.open(M.log_path, "a")
-		if f then
-			f:write(string.format("[%s] INFO: %s\n", time, msg))
-			f:close()
-		end
-	end)
-end
-
-function M.open_log()
-	vim.cmd("edit " .. M.log_path)
-end
 
 function M.open_floating_window()
 	-- Create a new empty buffer (not listed, scratch buffer)
@@ -101,9 +74,9 @@ function M.stream_ollama(prompt)
 	}, {
 		-- This callback runs every time stdout receives data
 		stdout = function(_, data)
-			-- M.log_info("Ollama stream stdout callback")
+			-- log.log_info("Ollama stream stdout callback")
 			if not data then
-				M.log_info("No data")
+				log.log_info("No data")
 				utils.append_to_buffer_text(M.buffer, "Failed to get ollama response. Is Ollama running?")
 				return
 			end
@@ -118,9 +91,9 @@ function M.stream_ollama(prompt)
 			end
 		end,
 		stderr = function(_, data)
-			M.log_error("stderr callback")
+			log.log_error("stderr callback")
 			if data then
-				M.log_error("stderr data: " .. data)
+				log.log_error("stderr data: " .. data)
 				return
 				-- utils.append_to_buffer(M.buffer, { data })
 			end
@@ -173,12 +146,12 @@ function M.ask_ollama_async(prompt)
 end
 
 function M.setup()
-	code_sug.register_suggestions()
+	-- code_sug.register_suggestions()
 	vim.api.nvim_create_user_command("LLM", M.open_floating_window, {
 		desc = "Open Chat with LLM.",
 	})
 
-	vim.api.nvim_create_user_command("LOG", M.open_log, {
+	vim.api.nvim_create_user_command("LOG", log.open_log, {
 		desc = "Open plugin log file",
 	})
 
@@ -189,12 +162,12 @@ function M.setup()
 
 		-- Don't send empty lines
 		if input ~= "" then
-			M.stream_ollama(input)
+			ollama.stream_ollama(input, M.buffer, M.window)
 		else
 			utils.append_to_buffer(M.buffer, { "Empty input" })
 		end
 	end, { buffer = M.buffer, desc = "Submit prompt to Ollama" })
-	M.stream_ollama("Say some greettings to the user who is just starting to work with you.")
+	ollama.stream_ollama("Say some greettings to the user who is just starting to work with you.", M.buffer, M.window)
 	utils.move_cursor_to_end_of_buffer(M.window)
 end
 
