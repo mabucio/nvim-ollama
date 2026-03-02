@@ -145,11 +145,8 @@ function M.ask_ollama_async(prompt)
 	utils.move_cursor_to_end_of_buffer(M.window)
 end
 
-local function generate_suggestion()
-	return "test..."
-end
 function M.setup()
-	code_sug.register_suggestions(generate_suggestion)
+	code_sug.register_suggestions(ollama.generate_code_suggestion)
 	vim.api.nvim_create_user_command("LLM", M.open_floating_window, {
 		desc = "Open Chat with LLM.",
 	})

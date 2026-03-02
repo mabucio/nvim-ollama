@@ -71,23 +71,23 @@ function utils.move_cursor_to_end_of_buffer(window)
 	end)
 end
 
+function utils.get_filename()
+	return vim.fn.expand("%:t")
+end
+
 function utils.get_lines_above_cursor(n)
-	-- 1. Get the filename with extension
-	local filename = vim.fn.expand("%:t")
-
-	-- 2. Get the current cursor position {row, col}
+	-- Get the current cursor position {row, col}
 	local cursor = vim.api.nvim_win_get_cursor(0)
-	local current_row = cursor[1] -- 1-indexed
+	local end_line = cursor[1] -- 1-indexed
 
-	-- 3. Calculate the range for n lines ending at current_row
+	-- Calculate the range for n lines ending at current_row
 	-- nvim_buf_get_lines(buffer, start, end, strict)
 	-- Start is inclusive, End is exclusive.
-	local end_line = current_row
 	local start_line = math.max(0, end_line - n)
 
 	local lines = vim.api.nvim_buf_get_lines(0, start_line, end_line, false)
 
-	return filename, lines
+	return table.concat(lines, "\n")
 end
 
 return utils
