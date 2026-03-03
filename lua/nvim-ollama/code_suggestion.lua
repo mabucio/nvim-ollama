@@ -74,6 +74,8 @@ local function should_suggest()
 	return true
 end
 
+-- This function should add two numbers
+
 function M.register_suggestions(func_generate_suggestion)
 	M.ns_id = vim.api.nvim_create_namespace("no_ghost_text")
 
