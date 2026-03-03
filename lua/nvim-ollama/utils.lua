@@ -1,5 +1,5 @@
 utils = {}
--- Define the log path: ~/.local/state/nvim/my_ollama_plugin.log
+
 function utils.print(text)
 	vim.schedule(function()
 		print(text)
@@ -88,6 +88,10 @@ function utils.get_lines_above_cursor(n)
 	local lines = vim.api.nvim_buf_get_lines(0, start_line, end_line, false)
 
 	return table.concat(lines, "\n")
+end
+
+function utils.async(fn)
+	coroutine.wrap(fn)()
 end
 
 return utils

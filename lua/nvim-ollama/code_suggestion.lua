@@ -1,3 +1,5 @@
+local log = require("nvim-ollama.log")
+
 M = {}
 
 M.ns_id = 0
@@ -9,6 +11,7 @@ local function show_suggestion(text)
 	local line = cursor[1]
 	local col = cursor[2]
 	M.current_suggestion = text
+	log.log_info("Current suggestion = " .. M.current_suggestion)
 
 	local mode = vim.api.nvim_get_mode().mode
 	if mode ~= "i" then
@@ -46,6 +49,31 @@ local function setup_hl()
 	)
 end
 
+local function should_suggest()
+	-- 1. Check filetype blacklist
+	local blacklist = { "TelescopePrompt", "NvimTree", "neo-tree", "notify", "packer", "lazy" }
+	local ft = vim.bo.filetype
+	for _, name in ipairs(blacklist) do
+		if ft == name then
+			return false
+		end
+	end
+
+	-- 2. Check buftype (ignore terminals, help files, etc.)
+	local bt = vim.bo.buftype
+	if bt ~= "" then
+		return false
+	end -- "prompt", "terminal", "nofile" are caught here
+
+	-- 3. Check if window is floating
+	local config = vim.api.nvim_win_get_config(0)
+	if config.relative ~= "" then
+		return false
+	end
+
+	return true
+end
+
 function M.register_suggestions(func_generate_suggestion)
 	M.ns_id = vim.api.nvim_create_namespace("no_ghost_text")
 
@@ -64,12 +92,20 @@ function M.register_suggestions(func_generate_suggestion)
 	-- Trigger suggestions automatically when text changes in Insert mode
 	vim.api.nvim_create_autocmd("TextChangedI", {
 		callback = function()
+			if not should_suggest() then
+				log.log_info("Shouldn't add suggestion in this window")
+				return
+			end
 			clear_suggestion()
 			vim.defer_fn(function()
 				-- Logic to decide WHAT to suggest goes here
 				clear_suggestion()
-				local suggestion = func_generate_suggestion()
-				show_suggestion(suggestion)
+				utils.async(function()
+					local suggestion = func_generate_suggestion()
+					if suggestion then
+						show_suggestion(suggestion)
+					end
+				end)
 			end, 1000)
 		end,
 	})

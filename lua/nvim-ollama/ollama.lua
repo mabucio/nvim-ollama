@@ -71,6 +71,7 @@ function M.ask_ollama_async(prompt)
 	}
 
 	ret_val = ""
+	local co = coroutine.running()
 	-- Use vim.system (Non-blocking)
 	vim.system({
 		"curl",
@@ -81,30 +82,29 @@ function M.ask_ollama_async(prompt)
 		"-d",
 		vim.json.encode(obj),
 	}, { text = true }, function(out)
-		log.log_info("MACIEKTEST")
-		-- This callback runs when the process finishes
-		if out.code ~= 0 then
-			log.log_error("ask_ollama_async: Ollama request failed.")
-			return ""
-		end
+		vim.schedule(function()
+			log.log_info("MACIEKTEST")
+			-- This callback runs when the process finishes
+			if out.code ~= 0 then
+				log.log_error("ask_ollama_async: Ollama request failed.")
+				return ""
+			end
 
-		local success, data = pcall(vim.json.decode, out.stdout)
-		if success and data.response then
-			-- Split response by newline for nvim_buf_set_lines
-
-			log.log_info("Lines:" .. data.response)
-			ret_val = data.response
+			local success, data = pcall(vim.json.decode, out.stdout)
+			if success and data.response then
+				log.log_info("Lines:" .. data.response)
+				coroutine.resume(co, data.response)
 			-- local lines = table.concat(data.response, "\n")
 			--
 			-- log.log_info("Lines:" .. lines)
 			-- return lines
-		else
-			log.log_error("ask_ollama_async: Failed to parse JSON")
-			return ""
-		end
+			else
+				log.log_error("ask_ollama_async: Failed to parse JSON")
+				coroutine.resume(co, "")
+			end
+		end)
 	end)
-
-	return ret_val
+	return coroutine.yield()
 	-- utils.append_to_buffer(buffer, { "User: " })
 	-- utils.move_cursor_to_end_of_buffer(window)
 end
@@ -121,8 +121,8 @@ function M.generate_code_suggestion()
 	prompt = prompt .. "\n</rules>"
 
 	local ret_val = M.ask_ollama_async(prompt)
-	log.log_info("ollama returned: " .. ret_val)
-	return M.ask_ollama_async(prompt)
+	log.log_info("Returning suggestion: " .. ret_val)
+	return ret_val
 end
 
 return M
